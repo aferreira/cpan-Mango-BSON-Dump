@@ -11,9 +11,14 @@ use Mojo::Util  ();
 use re          ();    # regexp_pattern()
 use JSON::XS    ();
 
+use Exporter 5.57 'import';
+our @EXPORT_OK = qw(to_extjson);
+
 sub to_extjson {
     my $doc = shift;
-    state $encoder = JSON::XS->new->convert_blessed(1)->pretty(1);
+    state $encoder = JSON::XS->new->convert_blessed(1);
+    my %opts = (pretty=>0,@_);
+    $encoder->$_($opts{$_}) for qw(pretty);
     return $encoder->encode($doc) . "\n";
 }
 
@@ -96,13 +101,64 @@ for my $class ( keys %TO_EXTJSON ) {
     Mojo::Util::monkey_patch( $class, TO_JSON => $patch );
 }
 
-
 1;
 
-# https://docs.mongodb.com/manual/reference/mongodb-extended-json/
-# https://docs.mongodb.com/manual/reference/bson-types/
-# http://bsonspec.org/
-# https://github.com/mongodb/specifications/tree/master/source/bson-corpus
 
 __END__
 
+
+=head1 SYNOPSIS
+
+    use Mango::BSON ':bson';
+    use Mango::BSON::Dump qw(to_extjson);
+
+    #  '{"v":{"$numberLong":"42"},"created":{"$date":"1970-01-01T00:00:00Z"}}'
+    to_extjson(bson_doc(v => bson_int64(42), created => bson_time(0)));
+
+    use Mojo::JSON qw(encode_json);
+
+    #  '{"v":{"$numberLong":"42"},"created":{"$date":"1970-01-01T00:00:00Z"}}'
+    encode_json(bson_doc(v => bson_int64(42), created => bson_time(0)));
+
+=head1 DESCRIPTION
+
+This module enables dumping Mango BSON documents and objects
+as Extended JSON (see https://docs.mongodb.com/manual/reference/mongodb-extended-json/),
+which might be handy for development and debugging.
+
+=head1 FUNCTIONS
+
+=over 4
+
+=item B<to_extjson>
+
+    $json = to_extjson($bson_doc);
+    $json = to_extjson($bson_doc, pretty => 1);
+
+Encodes C<$bson_doc> into Extended JSON.
+
+=back
+
+=head1 CAVEATS
+
+This module installs C<TO_JSON> methods to a number of packages
+(eg. Mango::BSON::Number, Mango::BSON::ObjectID, Regexp).
+This does not play well with other modules defining or installing
+the same methods to the same classes.
+As of Mango 1.29, this clashes with defined C<TO_JSON>
+for Mango::BSON::Binary, Mango::BSON::Number, and Mango::BSON::Time
+(which don't conform to Extended JSON).
+
+=head1 SEE ALSO
+
+    https://docs.mongodb.com/manual/reference/mongodb-extended-json/
+
+    https://docs.mongodb.com/manual/reference/bson-types/
+
+    http://bsonspec.org/
+
+    https://github.com/mongodb/specifications/tree/master/source/bson-corpus
+
+=head1 ACKNOWLEDGMENTS
+
+The development of this library has been partially sponsored by Connectivity, Inc.
