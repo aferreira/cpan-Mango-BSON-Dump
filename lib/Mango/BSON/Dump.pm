@@ -25,67 +25,77 @@ our %BINTYPE_MAP = (
     'user_defined' => Mango::BSON::BINARY_USER_DEFINED(),
 );
 
-# bson_bin
-Mojo::Util::monkey_patch 'Mango::BSON::Binary', TO_JSON => sub {
-    my $bindata = Mojo::Util::b64_encode( $_[0]->data, '' );
-    my $type = unpack( "H2", $BINTYPE_MAP{ $_[0]->type // 'generic' } );
-    { '$binary' => $bindata, '$type' => $type };
-};
+my %TO_EXTJSON = (
 
-# bson_code
-Mojo::Util::monkey_patch 'Mango::BSON::Code', TO_JSON => sub {
-    $_[0]->scope
-      ? { '$code' => $_[0]->code, '$scope' => $_[0]->scope }
-      : { '$code' => $_[0]->code };
-};
+    # bson_bin
+    'Mango::BSON::Binary' => sub {
+        my $bindata = Mojo::Util::b64_encode( $_[0]->data, '' );
+        my $type = unpack( "H2", $BINTYPE_MAP{ $_[0]->type // 'generic' } );
+        { '$binary' => $bindata, '$type' => $type };
+    },
 
-# bson_double
-# bson_int32
-# bson_int64
-Mojo::Util::monkey_patch 'Mango::BSON::Number', TO_JSON => sub {
-    ( $_[0]->type eq Mango::BSON::INT64() )
-      ? { '$numberLong' => $_[0]->to_string }
-      : $_[0]->value + 0    # DOUBLE() or INT32()
-};
+    # bson_code
+    'Mango::BSON::Code' => sub {
+        $_[0]->scope
+          ? { '$code' => $_[0]->code, '$scope' => $_[0]->scope }
+          : { '$code' => $_[0]->code };
+    },
 
-# bson_max
-Mojo::Util::monkey_patch 'Mango::BSON::_MaxKey', TO_JSON => sub {
-    { '$maxKey' => 1 };
-};
+    # bson_double
+    # bson_int32
+    # bson_int64
+    'Mango::BSON::Number' => sub {
+        ( $_[0]->type eq Mango::BSON::INT64() )
+          ? { '$numberLong' => $_[0]->to_string }
+          : $_[0]->value + 0    # DOUBLE() or INT32()
+    },
 
-# bson_min
-Mojo::Util::monkey_patch 'Mango::BSON::_MinKey', TO_JSON => sub {
-    { '$minKey' => 1 };
-};
+    # bson_max
+    'Mango::BSON::_MaxKey' => sub {
+        { '$maxKey' => 1 };
+    },
 
-# bson_oid
-Mojo::Util::monkey_patch 'Mango::BSON::ObjectID', TO_JSON => sub {
-    { '$oid' => $_[0]->to_string };
-};
+    # bson_min
+    'Mango::BSON::_MinKey' => sub {
+        { '$minKey' => 1 };
+    },
 
-# bson_time
-Mojo::Util::monkey_patch 'Mango::BSON::Time', TO_JSON => sub {
+    # bson_oid
+    'Mango::BSON::ObjectID' => sub {
+        { '$oid' => $_[0]->to_string };
+    },
 
-    #     {'$date' => {'$numberLong' => $_[0]->to_string . ''}}
-    { '$date' => $_[0]->to_datetime };
-};
+    # bson_time
+    'Mango::BSON::Time' => sub {
 
-# bson_ts
-Mojo::Util::monkey_patch 'Mango::BSON::Timestamp', TO_JSON => sub {
-    { '$timestamp' => { 't' => $_[0]->seconds, 'i' => $_[0]->increment } };
-};
+        # {'$date' => {'$numberLong' => $_[0]->to_string . ''}}
+        { '$date' => $_[0]->to_datetime };
+    },
 
-# regex
-Mojo::Util::monkey_patch 'Regexp', TO_JSON => sub {
-    my ( $p, $m ) = re::regexp_pattern( $_[0] );
-    { '$regex' => $p, '$options' => $m };
-};
+    # bson_ts
+    'Mango::BSON::Timestamp' => sub {
+        { '$timestamp' => { 't' => $_[0]->seconds, 'i' => $_[0]->increment } };
+    },
 
-# Don't need TO_JSON:
+    # regex
+    'Regexp' => sub {
+        my ( $p, $m ) = re::regexp_pattern( $_[0] );
+        { '$regex' => $p, '$options' => $m };
+    },
+
+);
+
+# Don't need TO_EXTJSON:
 #   bson_doc
 #   bson_dbref
 #   bson_true
 #   bson_false
+
+for my $class ( keys %TO_EXTJSON ) {
+    my $patch = $TO_EXTJSON{$class};
+    Mojo::Util::monkey_patch( $class, TO_JSON => $patch );
+}
+
 
 1;
 
