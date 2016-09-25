@@ -1,0 +1,6 @@
+
+# perltidy backups
+*.bak
+
+# vim temp files
+*.swp
