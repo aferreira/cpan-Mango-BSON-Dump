@@ -123,7 +123,7 @@ __END__
 =head1 DESCRIPTION
 
 This module enables dumping Mango BSON documents and objects
-as Extended JSON (see https://docs.mongodb.com/manual/reference/mongodb-extended-json/),
+as Extended JSON (see L<https://docs.mongodb.com/manual/reference/mongodb-extended-json/>),
 which might be handy for development and debugging.
 
 =head1 FUNCTIONS
