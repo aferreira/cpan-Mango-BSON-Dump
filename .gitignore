@@ -4,3 +4,6 @@
 
 # vim temp files
 *.swp
+
+inc
+Mango-BSON-Dump-*
