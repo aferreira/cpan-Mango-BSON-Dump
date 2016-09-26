@@ -4,7 +4,7 @@ use Test::More;
 use Mango::BSON ':bson';
 use Mango::BSON::Dump;
 
-use JSON::XS;
+use JSON::XS 3.0;
 
 my $encoder = JSON::XS->new->convert_blessed(1)->canonical(1);
 
